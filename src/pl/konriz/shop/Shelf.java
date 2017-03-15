@@ -3,6 +3,7 @@ package pl.konriz.shop;
 import java.util.ArrayList;
 /**
  * container for managing stock - amount and type of items to sale
+ * also used for importing/exporting itempacks between DBClasses
  * @author konriz
  *
  */

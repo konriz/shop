@@ -1,10 +1,12 @@
 package pl.konriz.shop;
 import java.util.ArrayList;
 import java.util.Date;
+
 /**
-Arraylist do zbierania zamówień;
-łączy wszystkie zakupy jednego paragonu
-*/
+ * gathers items ordered during one sale; counts itself value;
+ * @author konriz
+ *
+ */
 public class Order {
 	
 	private int serial;
@@ -14,9 +16,13 @@ public class Order {
 	private double sumPaid;
 	private double rest;
 	private int itemCount;
-	private boolean paid;
+	private int paid;
 	private Date trStart;
 	
+	/**
+	 * 
+	 * @param s - current counter number
+	 */
 	public Order(int s)
 	{
 		serial = s;
@@ -26,7 +32,7 @@ public class Order {
 		sumPaid = 0;
 		rest = 0;
 		itemCount = 0;
-		paid = false;
+		paid = 0;
 		trStart = new Date();
 	}
 	
@@ -53,13 +59,20 @@ public class Order {
 		addPosition(new ItemPack(itemS, amountS));
 	}
 	
-	public double pay()
+	public void pay(String type)
 	{
-		paid = true;
-		return this.getValueB();
+		//TODO paid with what? money or card?
+		if (type.equals("m"))
+		{
+			paid = 1;
+		}
+		else
+		{
+			paid = 2;
+		}
 	}
 	
-	public boolean checkPaid()
+	public int checkPaid()
 	{
 		return paid;
 	}
