@@ -1,0 +1,7 @@
+//TODO
+--baza danych online aktualizowana na życzenie
+----kontrola synchronizacji aktualnej bazy offline ze stara bza online - kilka dni pracy bez internetu -- dodać pole online synced które robi się true gdy przy zamykaniu było online sync
+zmiana bazy danych w trakcie obsługi programu (np na zamkniętym sklepie);
+raport miesięczny w postaci tabelarycznej - suma poszczególnych dni;
+GUI nie ma dużo sensu - baza ustawień systemowych?
+Zmiana amount na double - produkty sypkie
