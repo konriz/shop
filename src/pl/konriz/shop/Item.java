@@ -12,7 +12,13 @@ class Item {
 	private double priceB;
 	private double VAT;
 	
-	//full constructor: EAN, name, price;
+	/**
+	 * 
+	 * @param e - ean number of product
+	 * @param n - product name
+	 * @param p - price w/o tax
+	 * @param v - tax rate
+	 */
 	public Item(long e, String n, double p, double v)
 	{
 		ean = e;
@@ -22,11 +28,19 @@ class Item {
 		priceB = price + p * v;
 	}
 	
+	/**
+	 * 
+	 * @param e - ean number of product
+	 * @param n - product name
+	 * @param p - price w/o tax
+	 * v - default tax rate 0.23
+	 */
 	public Item(long e, String n, double p)
 	{
 		this(e, n, p, 0.23);
 	}
 
+	
 
 	public long getEan()
 	{

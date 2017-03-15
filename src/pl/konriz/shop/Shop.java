@@ -1,6 +1,11 @@
 package pl.konriz.shop;
 import java.util.ArrayList;
 
+/**
+ * app's backend. gathers all informaction about stock, account, orders;
+ * @author konriz
+ *
+ */
 class Shop 
 {
 	
@@ -9,6 +14,7 @@ class Shop
 	private double money;
 	private double card;
 	private Shelf stock;
+	private ArrayList<Invoice> invoiceList;
 	private Order currentOrder;
 	private OrderList currentList;
 	private ArrayList<OrderList> allOrders;
@@ -27,12 +33,11 @@ class Shop
 		onlineBase = null;		
 		name = (String) state[0];
 		account = (double) state[1];
-		//TODO import z DB
-		money = 0.0;
-		card = 0.0;
+		money = (double) state[2];
+		card = (double) state[3];
 		stock = dataBase.getShelf();
-		counter = (int) state[2];
-		
+		counter = (int) state[4];
+		invoiceList = new ArrayList<Invoice>();
 		allOrders = new ArrayList<OrderList>();
 		open = false;
 		
@@ -62,14 +67,11 @@ class Shop
 	
 	public void setOnlineState(String log)
 	{
-		Object[] state = onlineBase.getShopState(log);
-		dataBase.syncDB(onlineBase);
-		stock = dataBase.getShelf();
-		name = (String) state[0];
-		account = (double) state[1];
-		counter = (int) state[2];
-		//TODO dataBase.syncDB(onlineBase);
-		
+		if (!dataBase.isUpdated())
+		{
+			onlineBase.syncDB(dataBase, log);
+			dataBase.setUpdated(true);
+		}
 	}
 	
 	public double getAccount()
@@ -102,6 +104,11 @@ class Shop
 		return login;
 	}
 	
+	public int getCounter()
+	{
+		return counter;
+	}
+	
 	public Shelf getStock()
 	{
 		return stock;
@@ -110,6 +117,24 @@ class Shop
 	public void setStock(Shelf st)
 	{
 		stock = st;
+	}
+	
+	public ArrayList<Invoice> getInvoiceList()
+	{
+		return invoiceList;
+	}
+	
+	public Invoice getInvoice(String serial)
+	{
+		Invoice inv = null;
+		for (Invoice e : invoiceList)
+		{
+			if (e.getSerial().equals(serial))
+			{
+				inv = e;
+			}
+		}
+		return inv;
 	}
 	
 	public boolean isOpen()
@@ -131,14 +156,16 @@ class Shop
 		setOpen(true);
 		currentList = new OrderList();
 		makeOrder();
+		dataBase.setUpdated(false);
 	}
+	
+
 	
 	//start selling to customer
 	public void makeOrder()
 	{
 		currentOrder = new Order(counter);
 		counter ++;
-		// TODO change DB counter
 	}
 	
 	public ArrayList<OrderList> getAllOrders()
@@ -206,19 +233,21 @@ class Shop
 	//finish selling to customer
 	public void sellOrder(boolean cardPayment)
 	{
-		double toPay = Math.round(currentOrder.pay()*100.0)/100.0;
+		double toPay = Math.round(currentOrder.getValueB()*100.0)/100.0;
 		
-		if (cardPayment = true)
+		if (cardPayment == true)
 		{
+			currentOrder.pay("c");
 			card +=  toPay;
 		}
 		else
 		{
+			currentOrder.pay("m");
 			money += toPay;
 		}
 		
 		account += toPay;
-		dataBase.updateDB(currentOrder.getOrder());
+		dataBase.updateDB(this.getStock().getInventory());
 		currentList.add(currentOrder);
 		
 	}
@@ -231,70 +260,77 @@ class Shop
 		if (!currentList.isClosed() && currentList.getOrdersAmount() != 0)
 		{
 			currentList.closeOrderList();
-			allOrders.add(currentList);
-		}
+			allOrders.add(currentList);			
+		}		
 		setOpen(false);
+		dataBase.updateShopState(this);
 		if (onlineBase != null)
 		{
-			onlineBase.syncDB(dataBase);
+			onlineBase.syncDB(dataBase, login);
+			dataBase.setUpdated(true);
 		}
 	}
+	
+
 	
 	/**
 	 *  Adds ItemPack to dataBase, checks if input EAN exists and increments or adds duplicates
 	 * @param item item pack of stock items
 	 * @param duplicate "true" - adds new product when duplicated EAN input; "false" - adds amount to existing matching EAN product 
+	 * @param invoice - invoice which adds item to stock
 	 * @return -1 on input error, 0 on increment duplicated EAN, 1 on add new EAN, 2 on duplicate EAN;
 	 */
 	
-	public int addItem(ItemPack item, boolean duplicate)
+	public void updateStock(ItemPack item)
 	{
-		Item it = item.getItem();
-		long ean = it.getEan();
-		double price = it.getPriceB();	
-		boolean name = (it.getName()).equals("Nazwa");
-		//check if EAN is in dataBase
-		int ind = stock.checkEAN(ean);
-		if (ind == -1)
+		int ind = stock.checkEAN(item.getItem().getEan());
+		int amount = item.getAmount();
+		stock.getInventory(ind).addAmount(amount);
+		dataBase.updateDB(stock.getInventory(ind));
+	}
+	
+	public void addStock(ItemPack item)
+	{
+		stock.addItem(item);
+		dataBase.addToDB(item);
+	}
+	
+	public void getInvoices()
+	{
+		dataBase.getInvoices(this);
+	}
+	
+	public void addInvoice(Invoice inv)
+	{
+		invoiceList.add(inv);
+	}
+	
+	public void applyInvoice(Invoice inv, boolean duplicate)
+	{
+		for (ItemPack item : inv.getStock().getInventory())
 		{
-			//dodaj nowy ean i nowy produkt
-			if (price == 0 || name)
+			Item it = item.getItem();
+			long ean = it.getEan();
+			//check if EAN is in dataBase
+			int ind = stock.checkEAN(ean);
+			if (ind == -1)
 			{
-				return -1;
-			}
-			
+				addStock(item);
+			}	
 			else
 			{
-				stock.addItem(item);
-				dataBase.addToDB(item);
-				return  1;
-			}
-		}	
-		else
-		{
-			if (duplicate == false)
-			{
-				// zwiększ ilość produktu o danym ean
-				int amount = item.getAmount();
-				stock.getInventory(ind).addAmount(amount);
-				dataBase.updateDB(item);
-				return 0;
-			}
-			else 
-			{
-				//dodaj nowy produkt na dublowanym ean
-				if (price == 0 || name)
+				if (duplicate == false)
 				{
-					return -1;
+					// zwiększ ilość produktu o danym ean
+					updateStock(item);
 				}
-				
 				else 
 				{
-				stock.addItem(item);
-				dataBase.addToDB(item);
-				return 2;
-				}
-			}			
+					addStock(item);
+				}			
+			}
 		}
+		inv.close();
+		dataBase.addInvoice(inv);
 	}
 }
